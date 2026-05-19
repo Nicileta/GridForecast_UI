@@ -1,35 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../app_state.dart';
 import '../theme.dart';
 
 class Sidebar extends StatelessWidget {
-  final String plantType;
-  final double capacity;
-  final double units;
-  final double efficiency;
-  final List<Map<String, dynamic>> plantGroups;
-  final int totalCapacity;
-  final int expectedOutput;
-  final ValueChanged<String> onPlantTypeChanged;
-  final ValueChanged<double> onCapacityChanged;
-  final ValueChanged<double> onUnitsChanged;
-  final ValueChanged<double> onEfficiencyChanged;
-  final VoidCallback onAddPlant;
-
-  const Sidebar({
-    super.key,
-    required this.plantType,
-    required this.capacity,
-    required this.units,
-    required this.efficiency,
-    required this.plantGroups,
-    required this.totalCapacity,
-    required this.expectedOutput,
-    required this.onPlantTypeChanged,
-    required this.onCapacityChanged,
-    required this.onUnitsChanged,
-    required this.onEfficiencyChanged,
-    required this.onAddPlant,
-  });
+  final bool dark;
+  final String lang;
+  const Sidebar({super.key, required this.dark, required this.lang});
 
   static const _plantTypes = [
     'Solar PV', 'Wind Turbine', 'Hydropower', 'Gas Turbine', 'Nuclear'
@@ -37,93 +14,89 @@ class Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<AppState>();
     return Container(
       width: 252,
-      decoration: const BoxDecoration(
-        color: AppTheme.bg,
-        border: Border(right: BorderSide(color: AppTheme.border)),
+      decoration: BoxDecoration(
+        color: AppTheme.bgOf(dark),
+        border: Border(right: BorderSide(color: AppTheme.borderOf(dark))),
       ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Plant configuration ──
-            const _SectionLabel('Plant configuration'),
-            const SizedBox(height: 2),
+            _SectionLabel(Tr.t('plantConfig', lang), dark),
 
-            const _FieldLabel('Plant type'),
+            _FieldLabel(Tr.t('plantType', lang), dark),
             const SizedBox(height: 5),
             _Dropdown(
-              value: plantType,
+              value: s.plantType,
               items: _plantTypes,
-              onChanged: onPlantTypeChanged,
+              dark: dark,
+              onChanged: context.read<AppState>().setPlantType,
             ),
             const SizedBox(height: 12),
 
-            const _FieldLabel('Installed capacity (MW)'),
+            _FieldLabel('${Tr.t('capacity', lang)} (${s.unit})', dark),
             const SizedBox(height: 5),
             _NumberInput(
-              value: capacity,
-              onChanged: onCapacityChanged,
+              value: s.capacity, dark: dark,
+              onChanged: context.read<AppState>().setCapacity,
             ),
             const SizedBox(height: 12),
 
-            const _FieldLabel('Number of units'),
+            _FieldLabel(Tr.t('numUnits', lang), dark),
             const SizedBox(height: 5),
             _SliderRow(
-              value: units,
-              min: 1, max: 20,
-              label: units.round().toString(),
-              onChanged: onUnitsChanged,
+              value: s.units, min: 1, max: 20,
+              label: s.units.round().toString(),
+              dark: dark,
+              onChanged: context.read<AppState>().setUnits,
             ),
             const SizedBox(height: 12),
 
-            const _FieldLabel('Efficiency (%)'),
+            _FieldLabel('${Tr.t('efficiency', lang)} (%)', dark),
             const SizedBox(height: 5),
             _SliderRow(
-              value: efficiency,
-              min: 20, max: 99,
-              label: '${efficiency.round()}%',
-              onChanged: onEfficiencyChanged,
+              value: s.efficiency, min: 20, max: 99,
+              label: '${s.efficiency.round()}%',
+              dark: dark,
+              onChanged: context.read<AppState>().setEfficiency,
             ),
             const SizedBox(height: 14),
 
-            // Add plant button
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: onAddPlant,
-                icon: const Icon(Icons.add, size: 16, color: AppTheme.tx),
-                label: Text(
-                  'Add plant group',
-                  style: AppTheme.label.copyWith(fontSize: 13, color: AppTheme.tx),
-                ),
+                onPressed: context.read<AppState>().addPlantGroup,
+                icon: Icon(Icons.add, size: 16, color: AppTheme.txOf(dark)),
+                label: Text(Tr.t('addPlant', lang),
+                    style: AppTheme.label(dark).copyWith(fontSize: 13)),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  side: const BorderSide(color: AppTheme.border2),
+                  side: BorderSide(color: AppTheme.border2Of(dark)),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.r),
-                  ),
-                  backgroundColor: AppTheme.bg,
+                      borderRadius: BorderRadius.circular(AppTheme.r)),
+                  backgroundColor: AppTheme.bgOf(dark),
                 ),
               ),
             ),
 
-            // Plant group list
-            if (plantGroups.isNotEmpty) ...[
+            if (s.plantGroups.isNotEmpty) ...[
               const SizedBox(height: 10),
-              ...plantGroups.map((p) => _PlantRow(plant: p)),
+              ...s.plantGroups.asMap().entries.map((e) =>
+                  _PlantRow(plant: e.value, index: e.key, dark: dark)),
             ],
 
             const SizedBox(height: 24),
-
-            // ── Computed output ──
-            const _SectionLabel('Computed output'),
-            const SizedBox(height: 2),
-            _StatPill(label: 'Total capacity',  value: '${_fmt(totalCapacity)} MW'),
-            _StatPill(label: 'Expected output', value: '${_fmt(expectedOutput)} MW'),
-            _StatPill(label: 'Load factor',     value: '${efficiency.round()}%'),
+            _SectionLabel(Tr.t('computedOutput', lang), dark),
+            _StatPill(Tr.t('totalCap', lang),
+                '${_fmt(s.totalCapacity)} ${s.unit}', dark),
+            _StatPill(Tr.t('expectedOut', lang),
+                '${_fmt(s.expectedOutput)} ${s.unit}', dark),
+            _StatPill(Tr.t('loadFactor', lang),
+                '${s.efficiency.round()}%', dark),
           ],
         ),
       ),
@@ -131,205 +104,176 @@ class Sidebar extends StatelessWidget {
   }
 
   String _fmt(int v) {
-    if (v >= 1000) {
-      return '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}k';
-    }
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
     return v.toString();
   }
 }
 
 class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-
+  final String text; final bool dark;
+  const _SectionLabel(this.text, this.dark);
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 11),
-    child: Text(text.toUpperCase(), style: AppTheme.sectionLabel),
+    child: Text(text.toUpperCase(), style: AppTheme.sectionLabel(dark)),
   );
 }
 
 class _FieldLabel extends StatelessWidget {
-  final String text;
-  const _FieldLabel(this.text);
-
+  final String text; final bool dark;
+  const _FieldLabel(this.text, this.dark);
   @override
   Widget build(BuildContext context) =>
-    Text(text, style: AppTheme.label.copyWith(fontSize: 13));
+      Text(text, style: AppTheme.label(dark).copyWith(fontSize: 13));
 }
 
 class _Dropdown extends StatelessWidget {
-  final String value;
-  final List<String> items;
-  final ValueChanged<String> onChanged;
-  const _Dropdown({required this.value, required this.items, required this.onChanged});
-
+  final String value; final List<String> items;
+  final bool dark; final ValueChanged<String> onChanged;
+  const _Dropdown({required this.value, required this.items,
+    required this.dark, required this.onChanged});
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 11),
-      decoration: BoxDecoration(
-        color: AppTheme.bg,
-        border: Border.all(color: AppTheme.border2),
-        borderRadius: BorderRadius.circular(AppTheme.r),
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 11),
+    decoration: BoxDecoration(
+      color: AppTheme.bgOf(dark),
+      border: Border.all(color: AppTheme.border2Of(dark)),
+      borderRadius: BorderRadius.circular(AppTheme.r),
+    ),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: value, isExpanded: true,
+        dropdownColor: AppTheme.bgOf(dark),
+        style: AppTheme.label(dark).copyWith(fontSize: 14),
+        items: items.map((e) =>
+            DropdownMenuItem(value: e, child: Text(e))).toList(),
+        onChanged: (v) { if (v != null) onChanged(v); },
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          style: AppTheme.label.copyWith(fontSize: 14),
-          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (v) { if (v != null) onChanged(v); },
-        ),
-      ),
-    );
-  }
+    ),
+  );
 }
 
 class _NumberInput extends StatelessWidget {
-  final double value;
-  final ValueChanged<double> onChanged;
-  const _NumberInput({required this.value, required this.onChanged});
-
+  final double value; final bool dark; final ValueChanged<double> onChanged;
+  const _NumberInput({required this.value, required this.dark,
+    required this.onChanged});
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.bg,
-        border: Border.all(color: AppTheme.border2),
-        borderRadius: BorderRadius.circular(AppTheme.r),
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: AppTheme.bgOf(dark),
+      border: Border.all(color: AppTheme.border2Of(dark)),
+      borderRadius: BorderRadius.circular(AppTheme.r),
+    ),
+    child: TextField(
+      controller: TextEditingController(text: value.round().toString()),
+      keyboardType: TextInputType.number,
+      style: AppTheme.label(dark).copyWith(fontSize: 14),
+      decoration: const InputDecoration(
+        contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+        border: InputBorder.none,
       ),
-      child: TextField(
-        controller: TextEditingController(text: value.round().toString()),
-        keyboardType: TextInputType.number,
-        style: AppTheme.label.copyWith(fontSize: 14),
-        decoration: const InputDecoration(
-          contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-          border: InputBorder.none,
-        ),
-        onSubmitted: (v) {
-          final parsed = double.tryParse(v);
-          if (parsed != null) onChanged(parsed);
-        },
-      ),
-    );
-  }
+      onSubmitted: (v) {
+        final p = double.tryParse(v);
+        if (p != null) onChanged(p);
+      },
+    ),
+  );
 }
 
 class _SliderRow extends StatelessWidget {
-  final double value;
-  final double min, max;
-  final String label;
-  final ValueChanged<double> onChanged;
-  const _SliderRow({
-    required this.value, required this.min, required this.max,
-    required this.label, required this.onChanged,
-  });
-
+  final double value, min, max; final String label;
+  final bool dark; final ValueChanged<double> onChanged;
+  const _SliderRow({required this.value, required this.min,
+    required this.max, required this.label, required this.dark,
+    required this.onChanged});
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: AppTheme.green,
-              thumbColor: AppTheme.green,
-              inactiveTrackColor: AppTheme.border2,
-              trackHeight: 4,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-            ),
-            child: Slider(
-              value: value.clamp(min, max),
-              min: min, max: max,
-              divisions: (max - min).round(),
-              onChanged: onChanged,
-            ),
-          ),
+  Widget build(BuildContext context) => Row(children: [
+    Expanded(
+      child: SliderTheme(
+        data: SliderTheme.of(context).copyWith(
+          activeTrackColor: AppTheme.green,
+          thumbColor: AppTheme.green,
+          inactiveTrackColor: AppTheme.border2Of(dark),
+          trackHeight: 4,
+          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
         ),
-        SizedBox(
-          width: 38,
-          child: Text(
-            label,
-            textAlign: TextAlign.right,
-            style: AppTheme.label.copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.green,
-            ),
-          ),
+        child: Slider(
+          value: value.clamp(min, max), min: min, max: max,
+          divisions: (max - min).round(), onChanged: onChanged,
         ),
-      ],
-    );
-  }
+      ),
+    ),
+    SizedBox(
+      width: 38,
+      child: Text(label, textAlign: TextAlign.right,
+          style: AppTheme.label(dark).copyWith(
+              fontSize: 13, fontWeight: FontWeight.w600,
+              color: AppTheme.green)),
+    ),
+  ]);
 }
 
 class _StatPill extends StatelessWidget {
-  final String label, value;
-  const _StatPill({required this.label, required this.value});
-
+  final String label, value; final bool dark;
+  const _StatPill(this.label, this.value, this.dark);
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 7),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: AppTheme.pill,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: AppTheme.label.copyWith(fontSize: 13, color: AppTheme.greenDark)),
-          Text(value,  style: AppTheme.label.copyWith(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.greenDark)),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 7),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    decoration: AppTheme.pill(dark),
+    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Text(label, style: AppTheme.label(dark)
+          .copyWith(fontSize: 13, color: AppTheme.greenDark)),
+      Text(value, style: AppTheme.label(dark).copyWith(
+          fontSize: 13, fontWeight: FontWeight.w700,
+          color: AppTheme.greenDark)),
+    ]),
+  );
 }
 
 class _PlantRow extends StatelessWidget {
-  final Map<String, dynamic> plant;
-  const _PlantRow({required this.plant});
-
+  final Map<String, dynamic> plant; final int index; final bool dark;
+  const _PlantRow({required this.plant, required this.index,
+    required this.dark});
   @override
   Widget build(BuildContext context) {
-    final total = ((plant['capacity'] as double) * (plant['units'] as double)).round();
+    final total = ((plant['capacity'] as double) *
+        (plant['units'] as double)).round();
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: AppTheme.bg2,
+        color: AppTheme.bg2Of(dark),
         borderRadius: BorderRadius.circular(AppTheme.r),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(plant['type'], style: AppTheme.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500)),
-                Text(
-                  '${plant['capacity'].round()} MW × ${plant['units'].round()}',
-                  style: AppTheme.small.copyWith(fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppTheme.greenBg,
-              borderRadius: BorderRadius.circular(99),
-            ),
-            child: Text(
-              '$total MW',
-              style: AppTheme.label.copyWith(
-                fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.greenDark,
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: Row(children: [
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(plant['type'], style: AppTheme.label(dark)
+                .copyWith(fontSize: 12, fontWeight: FontWeight.w500)),
+            Text('${(plant['capacity'] as double).round()} MW'
+                ' × ${(plant['units'] as double).round()}',
+                style: AppTheme.small(dark).copyWith(fontSize: 11)),
+          ],
+        )),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+              color: AppTheme.greenBgOf(dark),
+              borderRadius: BorderRadius.circular(99)),
+          child: Text('$total MW', style: AppTheme.label(dark).copyWith(
+              fontSize: 10, fontWeight: FontWeight.w600,
+              color: AppTheme.greenDark)),
+        ),
+        const SizedBox(width: 6),
+        GestureDetector(
+          onTap: () => context.read<AppState>().removePlantGroup(index),
+          child: Icon(Icons.close, size: 14,
+              color: AppTheme.tx2Of(dark)),
+        ),
+      ]),
     );
   }
 }
