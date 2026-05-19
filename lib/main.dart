@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:prototip_ui/app.dart';
+import 'package:provider/provider.dart';
+import 'app_state.dart';
+import 'theme.dart';
+import 'app.dart';
 
 void main() {
-  runApp(const GridForecastApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AppState(),
+      child: const GridForecastApp(),
+    ),
+  );
 }
 
 class GridForecastApp extends StatelessWidget {
@@ -11,17 +19,13 @@ class GridForecastApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
     return MaterialApp(
       title: 'GridForecast',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1D9E75),
-          brightness: Brightness.light,
-        ),
-        textTheme: GoogleFonts.interTextTheme(),
-        useMaterial3: true,
-      ),
+      theme:     AppTheme.materialTheme(false),
+      darkTheme: AppTheme.materialTheme(true),
+      themeMode: state.darkMode ? ThemeMode.dark : ThemeMode.light,
       home: const AppShell(),
     );
   }
